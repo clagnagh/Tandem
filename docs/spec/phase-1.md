@@ -84,3 +84,50 @@ All routes live under `/api/v1` and carry the workspace ID in the path so tenant
 - Read the auth library's session code and summarize in half a page how a session is created, stored and revoked.
 - Write an ADR on session cookies versus JWTs.
 
+
+## Open questions (answer before coding)
+
+Each question has a recommended default. Write your answer under it, or write "OK" to accept the default.
+
+**Architecture and auth**
+
+1. **One origin or two?** Next.js (web) and Fastify (server) run as separate processes. If the browser talks to both directly, cookies and CSRF get harder (CORS, cross-port cookies).
+   *Default:* the browser only talks to Next.js. Next.js rewrites `/api/*` to Fastify, so there is one origin, cookies stay first-party and SameSite=Lax does real work.
+2. **Which auth library?** Auth.js is built around Next.js. This design runs auth on the Fastify server.
+   *Default:* Better Auth, mounted in Fastify, with its Drizzle adapter. Write an ADR.
+3. **Who owns the `users` table?** Better Auth has its own user, session, account and verification tables, and its column names differ from the spec (for example a boolean `emailVerified` instead of `email_verified_at`).
+   *Default:* use the auth library's schema, generated into `packages/db`, and accept its column names. The spec allows this ("plus whatever the auth library requires").
+4. **CSRF approach** (review checklist item).
+   *Default:* SameSite=Lax cookies, plus an `Origin` header check on every non-GET request, plus Better Auth's own origin checks. Write it down in an ADR and add a test that sends a cross-origin POST and expects 403.
+
+**Rules the spec leaves open**
+
+5. **Login rate limit:** "5 attempts per minute per IP and email". Is that one counter per (IP, email) pair, or two separate limits?
+   *Default:* two Redis counters, 5 per minute per IP and 5 per minute per email. Every attempt counts, not only failures. Return the same 429 either way.
+6. **Invite acceptance:** must the person accepting have the same email address the invite was sent to?
+   *Default:* yes. A logged-in user whose email differs gets a clear error, and the invite stays unused. Inviting someone who is already a member returns 409. Sending a new invite to the same email cancels the old one.
+7. **Deleting a workspace:** hard delete or soft delete?
+   *Default:* hard delete (cascades to members, invites, projects and tasks), owner only, and the user must type the workspace name to confirm. Soft delete and audit can come in Phase 4.
+8. **Projects:** the spec has no rename or delete endpoints for projects.
+   *Default:* add `PATCH` and `DELETE /workspaces/:workspaceId/projects/:projectId` so the isolation test covers them too.
+9. **Who can do what in Phase 1:** can members create projects, edit tasks and delete any task?
+   *Default:* members can do anything with projects and tasks. Only owners can rename or delete the workspace and create invites.
+10. **Assignee rules:** *Default:* the assignee must be a member of the workspace. When a member leaves, their tasks are unassigned.
+11. **Field limits:** *Default:* title 1–200 characters, description up to 10,000, workspace and project names 1–80. The slug is generated from the name, with a numeric suffix if it is taken.
+
+**Ordering under concurrency**
+
+12. **How does a move say where the task goes?** If the client sends a finished position string, two clients can compute the same key between the same neighbours and create duplicates.
+    *Default:* the client sends `{ status, beforeTaskId?, afterTaskId? }`. The server locks the neighbour rows, computes the key with the `fractional-indexing` library and writes one row, all in one transaction. Boards sort by `(position, id)` so a tie can never reorder other tasks. Write a test that sends two rapid moves at the same time.
+
+**Tooling gaps**
+
+13. **Down migrations:** Drizzle Kit generates up migrations only.
+    *Default:* each generated migration gets a hand-written `down.sql` next to it. A small script applies them, and CI runs up, down, then up again against seeded data. Write an ADR.
+14. **"Covers every endpoint":** how does the isolation test know about every endpoint?
+    *Default:* the test reads Fastify's route table (`app.printRoutes` or an `onRoute` hook). It fails if any `/workspaces/:workspaceId/...` route has no cross-tenant case.
+15. **Staging:** the host (Fly.io or Railway), email in staging (Mailpit only runs locally), and the GitHub OAuth apps (you need one for local and one for staging).
+    *Default:* Fly.io with Fly Postgres and Upstash Redis, and Resend's free tier for staging email. This needs accounts, which only you can create, so it waits until task 7.
+16. **Cloud sessions have no running Docker daemon**, so Testcontainers cannot start containers there. Postgres 16 and Redis 7 are installed directly, though.
+    *Default:* integration tests read `DATABASE_URL` and `REDIS_URL` when they are set, and fall back to Testcontainers when they are not. CI uses Testcontainers. Cloud sessions use the local services, started by a SessionStart hook.
+17. **Library versions:** Next.js is on version 16, which changed some APIs. *Default:* pin current versions at scaffold time and read each library's docs, plus `node_modules/next/dist/docs/`, before writing code that uses it.
