@@ -87,7 +87,7 @@ All routes live under `/api/v1` and carry the workspace ID in the path so tenant
 
 ## Open questions (answer before coding)
 
-Each question has a recommended default. Write your answer under it, or write "OK" to accept the default.
+**Answered 2026-10-02: all defaults accepted.** Each default below is now a decision; the larger ones get an ADR in `docs/adr/`.
 
 **Architecture and auth**
 

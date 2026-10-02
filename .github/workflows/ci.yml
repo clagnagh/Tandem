@@ -1,0 +1,36 @@
+# Runs on every pull request and on pushes to main. Phase 1 step 7 adds the
+# Playwright flow and the staging deploy.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      # No TEST_DATABASE_URL here, so tests start Postgres with Testcontainers
+      # (GitHub's runners have Docker).
+      - run: pnpm test:integration
+      - run: pnpm build
