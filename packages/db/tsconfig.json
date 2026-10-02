@@ -1,0 +1,4 @@
+{
+  "extends": "@tandem/config/tsconfig.base.json",
+  "include": ["src", "scripts", "tests", "drizzle.config.ts"]
+}
