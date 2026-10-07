@@ -60,6 +60,16 @@ export interface TestUser {
 }
 
 let userCount = 0;
+let ipCount = 0;
+
+/**
+ * A client IP no other request in the run uses, so tests do not trip each
+ * other's login rate limit (5 attempts per IP per minute).
+ */
+export function uniqueIp(): string {
+  ipCount += 1;
+  return `10.${Math.floor(ipCount / 250) % 250}.${ipCount % 250}.1`;
+}
 
 /** A unique user, so tests never collide on email addresses or rate limits. */
 export function newUser(name: string): Omit<TestUser, 'id' | 'cookie'> {
@@ -111,7 +121,7 @@ export async function createVerifiedUser(
   if (verifyRes.statusCode >= 400) {
     throw new Error(`verify failed: ${verifyRes.statusCode} ${verifyRes.body}`);
   }
-  const signInRes = await signIn(app, user);
+  const signInRes = await signIn(app, user, { ip: uniqueIp() });
   if (signInRes.statusCode !== 200) {
     throw new Error(`sign-in failed: ${signInRes.statusCode} ${signInRes.body}`);
   }

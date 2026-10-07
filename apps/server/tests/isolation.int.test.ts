@@ -259,7 +259,15 @@ describe('ids inside request bodies', () => {
       body: { status: 'done', beforeTaskId: globex.taskId },
     });
     expect(res.statusCode).toBe(404);
+    expect(res.json()).toMatchObject({ error: { code: 'not_found' } });
     expect(await snapshot()).toBe(before);
+
+    // Positive control: the same move without the foreign id works.
+    const ok = await send(t.app, 'POST', urlFor(`${W}/tasks/:taskId/move`, own), {
+      cookie: alice.cookie,
+      body: { status: 'done' },
+    });
+    expect(ok.statusCode, ok.body).toBe(200);
   });
 
   pendingIt('[step 5] will not assign a task to someone outside the workspace', async () => {
@@ -273,6 +281,13 @@ describe('ids inside request bodies', () => {
     });
     expect(res.statusCode).toBe(400);
     expect(await snapshot()).toBe(before);
+
+    // Positive control: assigning a member (Alice herself) works.
+    const ok = await send(t.app, 'PATCH', urlFor(`${W}/tasks/:taskId`, own), {
+      cookie: alice.cookie,
+      body: { assigneeId: alice.id },
+    });
+    expect(ok.statusCode, ok.body).toBe(200);
   });
 });
 
