@@ -14,8 +14,10 @@ Redis + BullMQ, Yjs, Vitest, Playwright.
 - pnpm dev: web on :3000 and server on :4000 (the worker arrives in Phase 5)
 - pnpm typecheck, pnpm lint, pnpm format
 - pnpm test: unit tests (`*.test.ts`)
-- pnpm test:integration: real Postgres (`*.int.test.ts`); uses
-  TEST_DATABASE_URL if set, otherwise Testcontainers
+- pnpm test:integration: real Postgres and Redis (`*.int.test.ts`); uses
+  TEST_DATABASE_URL and TEST_REDIS_URL if set, otherwise Testcontainers
+- SHOW_PENDING=1 pnpm test:integration: run pending tests as normal tests to
+  see why they fail
 - pnpm test:e2e: Playwright (Phase 1 step 6)
 - pnpm db:generate: write migration SQL from the Drizzle schema, then add
   the matching `.down.sql` by hand
@@ -48,6 +50,11 @@ Redis + BullMQ, Yjs, Vitest, Playwright.
 - Use plan mode for any change touching more than 3 files.
 - Write failing tests first. Never edit a test to make it pass unless the test
   is wrong, and say so when you do.
+- Tests for unbuilt behaviour use `pendingIt` (apps/server/tests/support/
+  pending.ts), named "[step N] ...". CI stays green while they fail and goes
+  red once they pass: then change `pendingIt` to `it`, nothing else.
+- Server integration tests talk HTTP only (tests/support/http.ts): real
+  sign-up, cookies, Origin header, client IP in X-Forwarded-For.
 - Small commits, one per green slice, conventional commit messages.
 - Never run destructive commands (drop, reset --hard, rm -rf) without asking.
 - Never commit secrets. Use .env.example; .env is gitignored.
