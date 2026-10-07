@@ -2,9 +2,15 @@
 import { randomUUID } from 'node:crypto';
 import type { Database } from '@tandem/db';
 import Fastify, { type FastifyBaseLogger, type FastifyInstance } from 'fastify';
+import { LOGIN_RATE_LIMIT } from '@tandem/shared';
 import type { Mailer } from './mail/mailer.ts';
+import { createAuth } from './modules/auth/auth.ts';
+import { createRateLimiter } from './modules/auth/rate-limit.ts';
+import { authRoutes } from './modules/auth/routes.ts';
 import { healthRoutes } from './modules/health/routes.ts';
 import { registerErrorHandler } from './plugins/error-handler.ts';
+import { registerOriginCheck } from './plugins/origin-check.ts';
+import { createRedis } from './redis.ts';
 
 /** Everything the app talks to, passed in so tests can supply their own. */
 export interface AppDeps {
@@ -23,7 +29,14 @@ export interface AppDeps {
     secret: string;
     github?: { clientId: string; clientSecret: string };
   };
+  /**
+   * Addresses allowed to set X-Forwarded-For (the Next.js server). Requests
+   * from anywhere else are identified by their TCP address.
+   */
+  trustedProxies?: string[];
 }
+
+const DEFAULT_TRUSTED_PROXIES = ['127.0.0.1', '::1'];
 
 // Accept a caller's request id only if it looks like an id, so a client
 // cannot write arbitrary text into our logs.
@@ -41,6 +54,12 @@ export function buildApp(deps: AppDeps): FastifyInstance {
         : randomUUID();
     },
     bodyLimit: 1_048_576, // 1 MiB
+    trustProxy: deps.trustedProxies ?? DEFAULT_TRUSTED_PROXIES,
+  });
+
+  const redis = createRedis(deps.redis.url, deps.logger);
+  app.addHook('onClose', () => {
+    redis.disconnect();
   });
 
   app.addHook('onRequest', async (request, reply) => {
@@ -48,9 +67,28 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   });
 
   registerErrorHandler(app);
+  registerOriginCheck(app, deps.auth.appUrl);
+
   void app.register(healthRoutes({ pingDatabase: deps.database.ping }));
-  // Phase 1 modules (auth, workspaces, projects, tasks) register under
-  // /api/v1 here, one plugin per module.
+  void app.register(
+    authRoutes({
+      auth: createAuth({
+        db: deps.database.db,
+        mailer: deps.mailer,
+        logger: deps.logger,
+        appUrl: deps.auth.appUrl,
+        secret: deps.auth.secret,
+        github: deps.auth.github,
+      }),
+      loginLimiter: createRateLimiter(redis, {
+        keyPrefix: deps.redis.keyPrefix,
+        maxAttempts: LOGIN_RATE_LIMIT.maxAttempts,
+        windowSeconds: LOGIN_RATE_LIMIT.windowSeconds,
+      }),
+      appUrl: deps.auth.appUrl,
+    }),
+  );
+  // Workspaces, projects and tasks (step 5) register under /api/v1 here.
 
   return app;
 }

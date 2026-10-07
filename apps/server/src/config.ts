@@ -11,6 +11,19 @@ const configSchema = z.object({
   BETTER_AUTH_SECRET: z.string().min(32, 'BETTER_AUTH_SECRET must be at least 32 characters'),
   GITHUB_CLIENT_ID: z.string().optional(),
   GITHUB_CLIENT_SECRET: z.string().optional(),
+  /** Proxies allowed to set X-Forwarded-For: the Next.js server (docs/adr/0002). */
+  TRUSTED_PROXIES: z
+    .string()
+    .default('127.0.0.1,::1')
+    .transform((list) =>
+      list
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
+  SMTP_HOST: z.string().default('localhost'),
+  SMTP_PORT: z.coerce.number().int().positive().default(1025),
+  MAIL_FROM: z.string().default('Tandem <no-reply@tandem.local>'),
 });
 
 export type Config = z.infer<typeof configSchema>;

@@ -55,3 +55,10 @@ export class RateLimitedError extends AppError {
     this.retryAfterSeconds = retryAfterSeconds;
   }
 }
+
+/** A dependency we need (Redis, email) is down; the client may retry later. */
+export class ServiceUnavailableError extends AppError {
+  constructor(message = 'Temporarily unavailable') {
+    super(503, 'unavailable', message);
+  }
+}

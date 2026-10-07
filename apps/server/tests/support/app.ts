@@ -46,10 +46,16 @@ export interface TestApp {
  * is the moment an onRoute hook can still see every route.
  */
 export async function createTestApp(
-  options: { beforeReady?: (app: FastifyInstance) => void } = {},
+  options: {
+    beforeReady?: (app: FastifyInstance) => void;
+    /** Point the app at this Redis instead, e.g. an unreachable one. */
+    redisUrl?: string;
+  } = {},
 ): Promise<TestApp> {
   const testDb = await createTestDatabase();
-  const redis = await createTestRedis();
+  const redis = options.redisUrl
+    ? { url: options.redisUrl, keyPrefix: 'unused:', cleanup: () => Promise.resolve() }
+    : await createTestRedis();
   const database = createDatabase(testDb.url, { max: 5 });
   const log = captureLogger();
   const outbox = createMemoryMailer();
