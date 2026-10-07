@@ -1,5 +1,5 @@
 import { Writable } from 'node:stream';
-import { createLogger } from '../src/logger.ts';
+import { createLogger } from '../../src/logger.ts';
 
 /** A real pino logger whose output is captured as parsed JSON lines. */
 export function captureLogger() {

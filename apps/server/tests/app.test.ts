@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { buildApp } from '../src/app.ts';
 import { ConflictError, RateLimitedError } from '../src/errors.ts';
-import { captureLogger } from './helpers.ts';
+import { unitTestDeps } from './support/app.ts';
+import { captureLogger } from './support/logger.ts';
 
-function appWith(pingDatabase: () => Promise<void> = () => Promise.resolve()) {
-  const log = captureLogger();
-  const app = buildApp({ logger: log.logger, pingDatabase });
+function appWith(ping: () => Promise<void> = () => Promise.resolve()) {
+  const { deps, log } = unitTestDeps();
+  const app = buildApp({ ...deps, database: { ...deps.database, ping } });
   return { app, log };
 }
 
@@ -124,7 +125,7 @@ describe('error handler', () => {
     const { app } = appWithRoutes();
     const res = await app.inject({ method: 'GET', url: '/nope' });
     expect(res.statusCode).toBe(404);
-    expect(res.json()).toMatchObject({ error: { code: 'not_found' } });
+    expect(res.json()).toMatchObject({ error: { code: 'route_not_found' } });
   });
 });
 

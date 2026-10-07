@@ -2,7 +2,7 @@
 # SessionStart hook for Claude Code cloud sessions, which have no Docker
 # daemon. Starts the Postgres 16 and Redis 7 installed in the container,
 # creates the dev database, installs dependencies and points integration
-# tests at the local server (docs/adr/0007). Does nothing on your own machine.
+# tests at the local servers (docs/adr/0007). Does nothing on your own machine.
 set -euo pipefail
 
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
@@ -36,4 +36,5 @@ pnpm -s db:migrate
 
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   echo 'export TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres' >> "$CLAUDE_ENV_FILE"
+  echo 'export TEST_REDIS_URL=redis://localhost:6379' >> "$CLAUDE_ENV_FILE"
 fi

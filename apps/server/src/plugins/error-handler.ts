@@ -48,8 +48,14 @@ export function registerErrorHandler(app: FastifyInstance): void {
   });
 
   app.setNotFoundHandler((request, reply) => {
-    return reply
-      .status(404)
-      .send({ error: { code: 'not_found', message: 'Route not found', requestId: request.id } });
+    return (
+      reply
+        .status(404)
+        // A different code from NotFoundError's "not_found", so a test can tell
+        // "this resource is hidden from you" apart from "this route does not exist".
+        .send({
+          error: { code: 'route_not_found', message: 'Route not found', requestId: request.id },
+        })
+    );
   });
 }

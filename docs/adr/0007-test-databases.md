@@ -16,9 +16,14 @@ Docker daemon, so Testcontainers cannot start containers there.
   on that server for each test file and drops it afterwards.
 - Otherwise it starts `pgvector/pgvector:pg16` with Testcontainers.
 
+Redis works the same way (`apps/server/tests/support/redis.ts`): with
+`TEST_REDIS_URL` set, each test file shares that server and isolates itself
+with a random key prefix, which the app puts in front of every Redis key.
+Otherwise a `redis:7-alpine` container is started.
+
 CI and your own machine (with Docker) use containers. Cloud sessions use the
-local server; `.claude/hooks/session-start.sh` starts it and sets
-`TEST_DATABASE_URL`.
+local servers; `.claude/hooks/session-start.sh` starts them and sets
+`TEST_DATABASE_URL` and `TEST_REDIS_URL`.
 
 ## Consequences
 
