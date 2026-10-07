@@ -1,6 +1,8 @@
 // Helpers that talk to the app the way the browser does: through the HTTP
 // API, with cookies, an Origin header and the client IP in X-Forwarded-For
 // (Next.js forwards requests from 127.0.0.1, docs/adr/0002).
+import http from 'node:http';
+import type { AddressInfo } from 'node:net';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import { TEST_APP_URL } from './app.ts';
 import { linkIn, tokenIn, type MemoryMailer } from './mailer.ts';
@@ -127,4 +129,41 @@ export async function createVerifiedUser(
   }
   const body = signInRes.json<{ user: { id: string } }>();
   return { ...user, id: body.user.id, cookie: cookiesFrom(signInRes) };
+}
+
+/**
+ * POSTs JSON over a real TCP socket. app.inject() tidies URLs (it resolves
+ * "/./" and "/../"), so tests about raw paths must go through the network.
+ * The app must be listening.
+ */
+export function postOverSocket(
+  app: FastifyInstance,
+  path: string,
+  body: unknown,
+  options: { ip?: string } = {},
+): Promise<number> {
+  const { port } = app.server.address() as AddressInfo;
+  const payload = JSON.stringify(body);
+  return new Promise((resolve, reject) => {
+    const req = http.request(
+      {
+        host: '127.0.0.1',
+        port,
+        path,
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'content-length': Buffer.byteLength(payload),
+          origin: TEST_APP_URL,
+          ...(options.ip && { 'x-forwarded-for': options.ip }),
+        },
+      },
+      (res) => {
+        res.resume();
+        resolve(res.statusCode ?? 0);
+      },
+    );
+    req.on('error', reject);
+    req.end(payload);
+  });
 }

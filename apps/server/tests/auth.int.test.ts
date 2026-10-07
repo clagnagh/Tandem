@@ -15,6 +15,7 @@ import {
   createVerifiedUser,
   newUser,
   pathOf,
+  postOverSocket,
   send,
   signIn,
   signUp,
@@ -203,6 +204,34 @@ describe('login rate limit: 5 attempts per minute per IP and per email', () => {
     }
     const sixth = await signIn(t.app, { email: 'spray-6@example.com', password: wrong }, { ip });
     expect(sixth.statusCode).toBe(429);
+  });
+
+  it('counts attempts on every path that reaches sign-in, like /./sign-in/email', async () => {
+    // URL parsing turns "/auth/./sign-in/email" and "/auth/x/../sign-in/email"
+    // into the sign-in path, so the limiter must count them too. This goes
+    // over a real socket because app.inject() would tidy the paths first.
+    await t.app.listen({ port: 0, host: '127.0.0.1' });
+    const ip = nextIp();
+    const variants = [
+      `${AUTH}/./sign-in/email`,
+      `${AUTH}/x/../sign-in/email`,
+      `${AUTH}/sign-in/./email`,
+      `${AUTH}/sign-in/email?probe=1`,
+      `${AUTH}/./sign-in/email`,
+      `${AUTH}/./sign-in/email`,
+    ];
+    const statuses: number[] = [];
+    for (const [i, path] of variants.entries()) {
+      statuses.push(
+        await postOverSocket(
+          t.app,
+          path,
+          { email: `variant-${i}@example.com`, password: wrong },
+          { ip },
+        ),
+      );
+    }
+    expect(statuses).toEqual([401, 401, 401, 401, 401, 429]);
   });
 
   it('[step 4] ignores X-Forwarded-For unless the request comes through the web app', async () => {

@@ -73,7 +73,11 @@ export function authRoutes(deps: AuthRouteDeps) {
       method: ['GET', 'POST'],
       url: `${AUTH_BASE_PATH}/*`,
       preHandler: async (request) => {
-        if (request.method !== 'POST' || request.url.split('?')[0] !== SIGN_IN_PATH) return;
+        // Compare the path Better Auth will route on: URL parsing resolves
+        // "/auth/./sign-in/email" and "/auth/x/../sign-in/email" to sign-in,
+        // so the raw request.url would let those skip the limit.
+        const path = new URL(request.url, deps.appUrl).pathname;
+        if (request.method !== 'POST' || path !== SIGN_IN_PATH) return;
         // Every attempt counts, right or wrong (docs/spec/phase-1.md, question 5).
         const email = emailFrom(request.body);
         const keys = [`login:ip:${request.ip}`, ...(email ? [`login:email:${email}`] : [])];
