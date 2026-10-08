@@ -34,3 +34,56 @@ jobs:
       # (GitHub's runners have Docker).
       - run: pnpm test:integration
       - run: pnpm build
+
+  # The Phase 1 main flow in a real browser (apps/web/e2e). Postgres, Redis
+  # and Mailpit run as service containers; Playwright starts the server and
+  # the production build of the web app.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: tandem
+          POSTGRES_PASSWORD: tandem
+          POSTGRES_DB: tandem
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U tandem" --health-interval 2s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+      mailpit:
+        image: axllent/mailpit:latest
+        ports: ['1025:1025', '8025:8025']
+    env:
+      DATABASE_URL: postgresql://tandem:tandem@localhost:5432/tandem
+      REDIS_URL: redis://localhost:6379
+      APP_URL: http://localhost:3000
+      API_ORIGIN: http://localhost:4000
+      # A throwaway value for this job's throwaway database, not a real secret.
+      BETTER_AUTH_SECRET: ci-only-secret-for-ephemeral-e2e-database-000
+      SMTP_HOST: localhost
+      SMTP_PORT: '1025'
+      MAILPIT_URL: http://localhost:8025
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @tandem/web exec playwright install --with-deps chromium
+      - run: pnpm db:migrate
+      - run: pnpm --filter @tandem/web build
+      - run: pnpm test:e2e
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report
+            apps/web/test-results
+          retention-days: 7
