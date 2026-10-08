@@ -93,6 +93,11 @@ export function createWorkspaceService(deps: WorkspaceServiceDeps) {
       return repo.listForUser(db, user.id);
     },
 
+    async members(user: SessionUser, workspaceId: string) {
+      await requireMember(user.id, workspaceId);
+      return repo.listMembers(db, workspaceId);
+    },
+
     async create(user: SessionUser, name: string): Promise<repo.WorkspaceRow> {
       const base = slugify(name);
       // Two people creating "Acme" at once can pick the same free slug; the

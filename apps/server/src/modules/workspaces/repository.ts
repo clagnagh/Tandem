@@ -57,6 +57,28 @@ export async function isMemberByEmail(
   return row !== undefined;
 }
 
+export interface MemberRow {
+  userId: string;
+  name: string;
+  email: string;
+  role: WorkspaceRole;
+}
+
+/** Members in join order (the owner first, as they joined at creation). */
+export function listMembers(db: Executor, workspaceId: string): Promise<MemberRow[]> {
+  return db
+    .select({
+      userId: workspaceMembers.userId,
+      name: users.name,
+      email: users.email,
+      role: workspaceMembers.role,
+    })
+    .from(workspaceMembers)
+    .innerJoin(users, eq(users.id, workspaceMembers.userId))
+    .where(eq(workspaceMembers.workspaceId, workspaceId))
+    .orderBy(workspaceMembers.joinedAt, workspaceMembers.userId);
+}
+
 /** Slugs equal to `base` or of the form `base-N`. */
 export async function slugsLike(db: Executor, base: string): Promise<string[]> {
   const rows = await db

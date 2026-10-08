@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # SessionStart hook for Claude Code cloud sessions, which have no Docker
 # daemon. Starts the Postgres 16 and Redis 7 installed in the container,
-# creates the dev database, installs dependencies and points integration
-# tests at the local servers (docs/adr/0007). Does nothing on your own machine.
+# creates the dev database, installs dependencies, builds and starts Mailpit,
+# and points integration tests at the local servers (docs/adr/0007). Does nothing on your own machine.
 set -euo pipefail
 
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
@@ -36,7 +36,23 @@ su postgres -c "psql -tAc \"SELECT 1 FROM pg_database WHERE datname = 'tandem'\"
 pnpm install --frozen-lockfile >/dev/null
 pnpm -s db:migrate
 
+# Mailpit for the end-to-end test. GitHub release downloads are blocked here,
+# but the Go module proxy is allowed, so build it from source once (about a
+# minute) into a cache. Skipped quietly if Go is missing or the build fails.
+MAILPIT_VERSION=v1.31.4
+MAILPIT_BIN="$HOME/.cache/tandem/mailpit-$MAILPIT_VERSION"
+if [ ! -x "$MAILPIT_BIN" ] && command -v go >/dev/null; then
+  mkdir -p "$(dirname "$MAILPIT_BIN")"
+  (cd /tmp && GOBIN="$HOME/.cache/tandem/gobin" go install "github.com/axllent/mailpit@$MAILPIT_VERSION" >/dev/null 2>&1 &&
+    mv "$HOME/.cache/tandem/gobin/mailpit" "$MAILPIT_BIN") || true
+fi
+if [ -x "$MAILPIT_BIN" ] && ! curl -sf http://localhost:8025/api/v1/info >/dev/null; then
+  (nohup "$MAILPIT_BIN" --smtp 127.0.0.1:1025 --listen 127.0.0.1:8025 --disable-version-check >/dev/null 2>&1 &)
+fi
+
 if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   echo 'export TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres' >> "$CLAUDE_ENV_FILE"
   echo 'export TEST_REDIS_URL=redis://localhost:6379' >> "$CLAUDE_ENV_FILE"
+  # Playwright here uses the preinstalled Chromium instead of downloading one.
+  echo 'export PW_CHROMIUM_PATH=/opt/pw-browsers/chromium' >> "$CLAUDE_ENV_FILE"
 fi

@@ -18,12 +18,15 @@ Redis + BullMQ, Yjs, Vitest, Playwright.
   TEST_DATABASE_URL and TEST_REDIS_URL if set, otherwise Testcontainers
 - SHOW_PENDING=1 pnpm test:integration: run pending tests as normal tests to
   see why they fail
-- pnpm test:e2e: Playwright (Phase 1 step 6)
+- pnpm test:e2e: Playwright main flow in a real browser (apps/web/e2e); needs
+  Postgres, Redis and Mailpit running, and starts the server and web app
+  itself. Cloud sessions: the session-start hook builds and starts Mailpit and
+  sets PW_CHROMIUM_PATH (never run `playwright install` there)
 - pnpm db:generate: write migration SQL from the Drizzle schema, then add
   the matching `.down.sql` by hand
 - pnpm db:migrate, pnpm db:rollback, pnpm db:seed
 - Cloud sessions have no Docker: .claude/hooks/session-start.sh starts the
-  local Postgres and Redis instead
+  local Postgres, Redis and Mailpit instead
 
 ## Architecture rules
 
@@ -46,6 +49,11 @@ Redis + BullMQ, Yjs, Vitest, Playwright.
   erasable syntax (no enum, no namespace).
 - Task positions are fractional-index keys computed by the server, in a
   `COLLATE "C"` column.
+- Web app: pages call the API through apps/web/lib/api.ts (typed with
+  packages/shared/src/dto.ts). Board logic lives in pure functions in
+  apps/web/lib/board.ts with unit tests in apps/web/tests. Before using a
+  Next.js API, read node_modules/next/dist/docs (Next 16 differs from older
+  versions).
 
 ## Workflow rules
 

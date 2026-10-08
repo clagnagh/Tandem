@@ -125,6 +125,25 @@ describe('workspaces', () => {
   });
 });
 
+describe('members', () => {
+  it('[step 6] lists members with name, email and role', async () => {
+    const alice = await createVerifiedUser(t.app, t.outbox, 'Alice');
+    const ws = await createWorkspace(alice, 'Team');
+    const dana = await createVerifiedUser(t.app, t.outbox, 'Dana');
+    expect((await invite(alice, ws.id, dana.email)).statusCode).toBe(201);
+    expect((await accept(dana, inviteToken(dana.email))).statusCode).toBe(200);
+
+    const res = await send(t.app, 'GET', `${API}/workspaces/${ws.id}/members`, {
+      cookie: dana.cookie,
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([
+      { userId: alice.id, name: alice.name, email: alice.email, role: 'owner' },
+      { userId: dana.id, name: dana.name, email: dana.email, role: 'member' },
+    ]);
+  });
+});
+
 describe('invites', () => {
   it('[step 5] lets an invited user join as a member through the emailed link', async () => {
     const alice = await createVerifiedUser(t.app, t.outbox, 'Alice');
