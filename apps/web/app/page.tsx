@@ -1,4 +1,5 @@
 import { healthResponseSchema } from '@tandem/shared';
+import Link from 'next/link';
 
 // Rendered on every request so the status line is live.
 export const dynamic = 'force-dynamic';
@@ -22,6 +23,14 @@ export default async function Home() {
       <p className="text-zinc-600">
         Docs, tasks and an AI assistant for your team. Phase 1 is under construction.
       </p>
+      <div className="flex gap-3">
+        <Link href="/sign-in" className="rounded-md bg-zinc-900 px-4 py-2 text-sm text-white">
+          Sign in
+        </Link>
+        <Link href="/sign-up" className="rounded-md border border-zinc-300 px-4 py-2 text-sm">
+          Create an account
+        </Link>
+      </div>
       <p className="text-sm text-zinc-500" data-testid="api-status">
         {status}
       </p>

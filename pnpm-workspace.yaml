@@ -6,6 +6,7 @@ packages:
 onlyBuiltDependencies:
   - esbuild
 ignoredBuiltDependencies:
+  - unrs-resolver
   - cpu-features
   - protobufjs
   - ssh2
