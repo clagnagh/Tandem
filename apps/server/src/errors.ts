@@ -26,8 +26,8 @@ export class UnauthorizedError extends AppError {
 }
 
 export class ForbiddenError extends AppError {
-  constructor(message = 'Not allowed') {
-    super(403, 'forbidden', message);
+  constructor(message = 'Not allowed', code = 'forbidden') {
+    super(403, code, message);
   }
 }
 
@@ -36,14 +36,21 @@ export class ForbiddenError extends AppError {
  * rather than 403 avoids confirming that another workspace's id is real.
  */
 export class NotFoundError extends AppError {
-  constructor(message = 'Not found') {
-    super(404, 'not_found', message);
+  constructor(message = 'Not found', code = 'not_found') {
+    super(404, code, message);
   }
 }
 
 export class ConflictError extends AppError {
   constructor(message = 'Conflict', code = 'conflict') {
     super(409, code, message);
+  }
+}
+
+/** The thing existed but is used up for good, e.g. an accepted invite. */
+export class GoneError extends AppError {
+  constructor(message: string, code: string) {
+    super(410, code, message);
   }
 }
 

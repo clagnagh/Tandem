@@ -8,8 +8,15 @@ import { createAuth } from './modules/auth/auth.ts';
 import { createRateLimiter } from './modules/auth/rate-limit.ts';
 import { authRoutes } from './modules/auth/routes.ts';
 import { healthRoutes } from './modules/health/routes.ts';
+import { projectRoutes } from './modules/projects/routes.ts';
+import { createProjectService } from './modules/projects/service.ts';
+import { taskRoutes } from './modules/tasks/routes.ts';
+import { createTaskService } from './modules/tasks/service.ts';
+import { workspaceRoutes } from './modules/workspaces/routes.ts';
+import { createWorkspaceService } from './modules/workspaces/service.ts';
 import { registerErrorHandler } from './plugins/error-handler.ts';
 import { registerOriginCheck } from './plugins/origin-check.ts';
+import { requireSession } from './plugins/session.ts';
 import { createRedis } from './redis.ts';
 
 /** Everything the app talks to, passed in so tests can supply their own. */
@@ -70,16 +77,18 @@ export function buildApp(deps: AppDeps): FastifyInstance {
   registerOriginCheck(app, deps.auth.appUrl);
 
   void app.register(healthRoutes({ pingDatabase: deps.database.ping }));
+
+  const auth = createAuth({
+    db: deps.database.db,
+    mailer: deps.mailer,
+    logger: deps.logger,
+    appUrl: deps.auth.appUrl,
+    secret: deps.auth.secret,
+    github: deps.auth.github,
+  });
   void app.register(
     authRoutes({
-      auth: createAuth({
-        db: deps.database.db,
-        mailer: deps.mailer,
-        logger: deps.logger,
-        appUrl: deps.auth.appUrl,
-        secret: deps.auth.secret,
-        github: deps.auth.github,
-      }),
+      auth,
       loginLimiter: createRateLimiter(redis, {
         keyPrefix: deps.redis.keyPrefix,
         maxAttempts: LOGIN_RATE_LIMIT.maxAttempts,
@@ -88,7 +97,25 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       appUrl: deps.auth.appUrl,
     }),
   );
-  // Workspaces, projects and tasks (step 5) register under /api/v1 here.
+
+  // Modules call each other only through these services (architecture rule 1).
+  const workspaces = createWorkspaceService({
+    db: deps.database.db,
+    mailer: deps.mailer,
+    logger: deps.logger,
+    appUrl: deps.auth.appUrl,
+  });
+  const projects = createProjectService({ db: deps.database.db, workspaces });
+  const tasks = createTaskService({ db: deps.database.db, workspaces, projects });
+
+  // Everything in here needs a signed-in user. Fastify scopes the hook to
+  // this plugin, so it does not apply to /health or /api/v1/auth.
+  void app.register(async (api) => {
+    requireSession(api, auth);
+    await api.register(workspaceRoutes(workspaces));
+    await api.register(projectRoutes(projects));
+    await api.register(taskRoutes(tasks));
+  });
 
   return app;
 }

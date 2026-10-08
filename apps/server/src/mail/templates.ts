@@ -58,3 +58,21 @@ export function passwordResetEmail(user: { email: string; name: string }, url: s
     outro: "If that wasn't you, ignore this email: your password stays the same.",
   });
 }
+
+export function inviteEmail(options: {
+  to: string;
+  workspaceName: string;
+  inviterName: string;
+  url: string;
+}): Email {
+  const { to, workspaceName, inviterName, url } = options;
+  return linkEmail({
+    to,
+    name: 'there',
+    subject: `${inviterName} invited you to ${workspaceName} on Tandem`,
+    intro: `${inviterName} invited you to join the workspace "${workspaceName}". The link works once and expires in 7 days.`,
+    action: 'Join the workspace',
+    url,
+    outro: "If you weren't expecting this, you can ignore this email.",
+  });
+}

@@ -4,10 +4,9 @@
 //  - "Tasks can be created, edited, assigned, moved between columns and
 //    reordered by drag and drop; order survives a reload."
 //  - "Two rapid moves of the same task never corrupt the order of other tasks."
-import { afterAll, beforeAll, describe, expect } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp, type TestApp } from './support/app.ts';
 import { API, createVerifiedUser, send, type TestUser } from './support/http.ts';
-import { pendingIt } from './support/pending.ts';
 
 let t: TestApp;
 
@@ -99,7 +98,7 @@ function move(b: Board, taskId: string, body: Record<string, unknown>) {
 }
 
 describe('projects', () => {
-  pendingIt('[step 5] lists, renames and deletes projects', async () => {
+  it('[step 5] lists, renames and deletes projects', async () => {
     const b = await newBoard();
     const base = `${API}/workspaces/${b.workspaceId}/projects`;
 
@@ -123,7 +122,7 @@ describe('projects', () => {
 });
 
 describe('tasks', () => {
-  pendingIt('[step 5] creates tasks with defaults, appending each to its column', async () => {
+  it('[step 5] creates tasks with defaults, appending each to its column', async () => {
     const b = await newBoard();
     const first = await createTask(b, { title: 'First' });
     expect(first).toMatchObject({
@@ -144,7 +143,7 @@ describe('tasks', () => {
     });
   });
 
-  pendingIt('[step 5] edits, assigns and unassigns a task', async () => {
+  it('[step 5] edits, assigns and unassigns a task', async () => {
     const b = await newBoard();
     const task = await createTask(b, { title: 'Draft' });
 
@@ -172,7 +171,19 @@ describe('tasks', () => {
     expect(cleared.json()).toMatchObject({ assigneeId: null, dueDate: null, title: 'Final' });
   });
 
-  pendingIt('[step 5] deletes a task', async () => {
+  it('[step 5] gives tasks created at the same moment distinct positions', async () => {
+    // Without the project lock, simultaneous creates all read the same
+    // "last position" and get the same key, so their order is undefined.
+    const b = await newBoard();
+    const titles = Array.from({ length: 8 }, (_, i) => `Parallel ${i}`);
+    await Promise.all(titles.map((title) => createTask(b, { title })));
+
+    const tasks = await listTasks(b);
+    expect(tasks.map((task) => task.title).sort()).toEqual([...titles].sort());
+    expect(new Set(tasks.map((task) => task.position)).size).toBe(titles.length);
+  });
+
+  it('[step 5] deletes a task', async () => {
     const b = await newBoard();
     const task = await createTask(b, { title: 'Temporary' });
     const res = await send(t.app, 'DELETE', taskUrl(b, task.id), { cookie: b.member.cookie });
@@ -194,7 +205,7 @@ describe('moving tasks', () => {
     return { b, id };
   }
 
-  pendingIt('[step 5] moves a task between columns and reorders within one', async () => {
+  it('[step 5] moves a task between columns and reorders within one', async () => {
     const { b, id } = await boardWithTodos(['A', 'B', 'C', 'D']);
 
     // Into an empty column.
@@ -214,27 +225,24 @@ describe('moving tasks', () => {
     expect(await columns(b)).toEqual({ todo: ['D'], in_progress: [], done: ['B', 'C', 'A'] });
   });
 
-  pendingIt(
-    '[step 5] keeps every other task in place when one task is moved twice at once',
-    async () => {
-      const { b, id } = await boardWithTodos(['A', 'B', 'C', 'D', 'E']);
+  it('[step 5] keeps every other task in place when one task is moved twice at once', async () => {
+    const { b, id } = await boardWithTodos(['A', 'B', 'C', 'D', 'E']);
 
-      // Two rapid moves of C, sent together: one to the top, one to the bottom.
-      const [first, second] = await Promise.all([
-        move(b, id('C'), { status: 'todo', afterTaskId: id('A') }),
-        move(b, id('C'), { status: 'todo', beforeTaskId: id('E') }),
-      ]);
-      expect([first.statusCode, second.statusCode]).toEqual([200, 200]);
+    // Two rapid moves of C, sent together: one to the top, one to the bottom.
+    const [first, second] = await Promise.all([
+      move(b, id('C'), { status: 'todo', afterTaskId: id('A') }),
+      move(b, id('C'), { status: 'todo', beforeTaskId: id('E') }),
+    ]);
+    expect([first.statusCode, second.statusCode]).toEqual([200, 200]);
 
-      const order = (await columns(b)).todo ?? [];
-      expect(order.filter((title) => title !== 'C')).toEqual(['A', 'B', 'D', 'E']);
-      expect([...order].sort()).toEqual(['A', 'B', 'C', 'D', 'E']);
-      const positions = (await listTasks(b)).map((task) => task.position);
-      expect(new Set(positions).size).toBe(positions.length);
-    },
-  );
+    const order = (await columns(b)).todo ?? [];
+    expect(order.filter((title) => title !== 'C')).toEqual(['A', 'B', 'D', 'E']);
+    expect([...order].sort()).toEqual(['A', 'B', 'C', 'D', 'E']);
+    const positions = (await listTasks(b)).map((task) => task.position);
+    expect(new Set(positions).size).toBe(positions.length);
+  });
 
-  pendingIt('[step 5] refuses neighbours that are in the wrong order (stale board)', async () => {
+  it('[step 5] refuses neighbours that are in the wrong order (stale board)', async () => {
     const { b, id } = await boardWithTodos(['A', 'B', 'C']);
     const res = await move(b, id('C'), {
       status: 'todo',
@@ -246,7 +254,7 @@ describe('moving tasks', () => {
     expect((await columns(b)).todo).toEqual(['A', 'B', 'C']);
   });
 
-  pendingIt('[step 5] refuses a neighbour from another column', async () => {
+  it('[step 5] refuses a neighbour from another column', async () => {
     const { b, id } = await boardWithTodos(['A', 'B']);
     const res = await move(b, id('A'), { status: 'done', beforeTaskId: id('B') });
     expect(res.statusCode).toBe(400);

@@ -5,11 +5,10 @@
 //    them join as a member."
 //  - "An invite link works exactly once and expires after 7 days."
 import { createHash, randomBytes } from 'node:crypto';
-import { afterAll, beforeAll, describe, expect } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp, type TestApp } from './support/app.ts';
 import { API, createVerifiedUser, send, type TestUser } from './support/http.ts';
 import { linkIn } from './support/mailer.ts';
-import { pendingIt } from './support/pending.ts';
 
 let t: TestApp;
 
@@ -65,7 +64,7 @@ function accept(user: TestUser | undefined, token: string) {
 }
 
 describe('workspaces', () => {
-  pendingIt('[step 5] creates a workspace owned by its creator', async () => {
+  it('[step 5] creates a workspace owned by its creator', async () => {
     const alice = await createVerifiedUser(t.app, t.outbox, 'Alice');
     const ws = await createWorkspace(alice, '  Acme Rockets  ');
 
@@ -73,7 +72,7 @@ describe('workspaces', () => {
     expect(await listWorkspaces(alice)).toContainEqual(ws);
   });
 
-  pendingIt('[step 5] gives a second workspace with the same name its own slug', async () => {
+  it('[step 5] gives a second workspace with the same name its own slug', async () => {
     const alice = await createVerifiedUser(t.app, t.outbox, 'Alice');
     const bob = await createVerifiedUser(t.app, t.outbox, 'Bob');
     const first = await createWorkspace(alice, 'Same Name');
@@ -83,7 +82,7 @@ describe('workspaces', () => {
     expect(second.slug).toMatch(/^same-name-\d+$/);
   });
 
-  pendingIt('[step 5] renames a workspace without changing its slug', async () => {
+  it('[step 5] renames a workspace without changing its slug', async () => {
     const alice = await createVerifiedUser(t.app, t.outbox, 'Alice');
     const ws = await createWorkspace(alice, 'Old Name');
 
@@ -95,7 +94,7 @@ describe('workspaces', () => {
     expect(res.json()).toMatchObject({ id: ws.id, name: 'New Name', slug: ws.slug });
   });
 
-  pendingIt('[step 5] deletes a workspace with everything in it', async () => {
+  it('[step 5] deletes a workspace with everything in it', async () => {
     const alice = await createVerifiedUser(t.app, t.outbox, 'Alice');
     const ws = await createWorkspace(alice, 'Doomed');
     const project = await send(t.app, 'POST', `${API}/workspaces/${ws.id}/projects`, {
@@ -115,7 +114,7 @@ describe('workspaces', () => {
     expect(left.rowCount).toBe(0);
   });
 
-  pendingIt('[step 5] rejects unknown fields in the request body', async () => {
+  it('[step 5] rejects unknown fields in the request body', async () => {
     const alice = await createVerifiedUser(t.app, t.outbox, 'Alice');
     const res = await send(t.app, 'POST', `${API}/workspaces`, {
       cookie: alice.cookie,
@@ -127,7 +126,7 @@ describe('workspaces', () => {
 });
 
 describe('invites', () => {
-  pendingIt('[step 5] lets an invited user join as a member through the emailed link', async () => {
+  it('[step 5] lets an invited user join as a member through the emailed link', async () => {
     const alice = await createVerifiedUser(t.app, t.outbox, 'Alice');
     const ws = await createWorkspace(alice, 'Inviting');
     const dana = await createVerifiedUser(t.app, t.outbox, 'Dana');
@@ -144,7 +143,7 @@ describe('invites', () => {
     );
   });
 
-  pendingIt('[step 5] works exactly once', async () => {
+  it('[step 5] works exactly once', async () => {
     const alice = await createVerifiedUser(t.app, t.outbox, 'Alice');
     const ws = await createWorkspace(alice, 'Once');
     const dana = await createVerifiedUser(t.app, t.outbox, 'Dana');
@@ -157,7 +156,7 @@ describe('invites', () => {
     expect(again.json()).toMatchObject({ error: { code: 'invite_used' } });
   });
 
-  pendingIt('[step 5] expires after 7 days', async () => {
+  it('[step 5] expires after 7 days', async () => {
     const alice = await createVerifiedUser(t.app, t.outbox, 'Alice');
     const ws = await createWorkspace(alice, 'Expiring');
     const dana = await createVerifiedUser(t.app, t.outbox, 'Dana');
@@ -179,7 +178,7 @@ describe('invites', () => {
     expect(late.json()).toMatchObject({ error: { code: 'invite_expired' } });
   });
 
-  pendingIt('[step 5] stores only a hash of the token', async () => {
+  it('[step 5] stores only a hash of the token', async () => {
     const alice = await createVerifiedUser(t.app, t.outbox, 'Alice');
     const ws = await createWorkspace(alice, 'Hashed');
     const email = 'hashed-invitee@example.com';
@@ -194,7 +193,7 @@ describe('invites', () => {
     expect(JSON.stringify(rows.rows)).not.toContain(token);
   });
 
-  pendingIt('[step 5] refuses someone signed in with a different email', async () => {
+  it('[step 5] refuses someone signed in with a different email', async () => {
     const alice = await createVerifiedUser(t.app, t.outbox, 'Alice');
     const ws = await createWorkspace(alice, 'Wrong person');
     const dana = await createVerifiedUser(t.app, t.outbox, 'Dana');
@@ -209,7 +208,7 @@ describe('invites', () => {
     expect((await accept(dana, token)).statusCode).toBe(200);
   });
 
-  pendingIt('[step 5] needs a signed-in user', async () => {
+  it('[step 5] needs a signed-in user', async () => {
     const alice = await createVerifiedUser(t.app, t.outbox, 'Alice');
     const ws = await createWorkspace(alice, 'Anonymous');
     const email = 'anon-invitee@example.com';
@@ -217,7 +216,7 @@ describe('invites', () => {
     expect((await accept(undefined, inviteToken(email))).statusCode).toBe(401);
   });
 
-  pendingIt('[step 5] answers 404 for a token that never existed', async () => {
+  it('[step 5] answers 404 for a token that never existed', async () => {
     const dana = await createVerifiedUser(t.app, t.outbox, 'Dana');
     const res = await accept(dana, randomBytes(32).toString('base64url'));
     expect(res.statusCode).toBe(404);
@@ -225,7 +224,7 @@ describe('invites', () => {
     expect(res.json()).toMatchObject({ error: { code: 'invite_not_found' } });
   });
 
-  pendingIt('[step 5] refuses to invite someone who is already a member', async () => {
+  it('[step 5] refuses to invite someone who is already a member', async () => {
     const alice = await createVerifiedUser(t.app, t.outbox, 'Alice');
     const ws = await createWorkspace(alice, 'Members');
     const res = await invite(alice, ws.id, alice.email);
@@ -233,7 +232,7 @@ describe('invites', () => {
     expect(res.json()).toMatchObject({ error: { code: 'already_member' } });
   });
 
-  pendingIt('[step 5] cancels the old link when the same email is invited again', async () => {
+  it('[step 5] cancels the old link when the same email is invited again', async () => {
     const alice = await createVerifiedUser(t.app, t.outbox, 'Alice');
     const ws = await createWorkspace(alice, 'Reinvite');
     const dana = await createVerifiedUser(t.app, t.outbox, 'Dana');

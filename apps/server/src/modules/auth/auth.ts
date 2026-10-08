@@ -5,6 +5,7 @@ import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import type { FastifyBaseLogger } from 'fastify';
 import type { Email, Mailer } from '../../mail/mailer.ts';
+import { sendInBackground } from '../../mail/send-in-background.ts';
 import { passwordResetEmail, verificationEmail } from '../../mail/templates.ts';
 
 export const AUTH_BASE_PATH = '/api/v1/auth';
@@ -24,10 +25,8 @@ export function createAuth(options: AuthOptions) {
   // Emails are sent without waiting for the SMTP server. Waiting would make
   // "reset password" slower for real accounts than for unknown emails, and
   // that timing difference would reveal which emails have accounts.
-  const sendInBackground = (email: Email) => {
-    mailer.send(email).catch((err: unknown) => {
-      logger.error({ err, subject: email.subject }, 'failed to send email');
-    });
+  const send = (email: Email) => {
+    sendInBackground(mailer, logger, email);
     return Promise.resolve();
   };
 
@@ -52,11 +51,11 @@ export function createAuth(options: AuthOptions) {
       enabled: true,
       requireEmailVerification: true,
       revokeSessionsOnPasswordReset: true,
-      sendResetPassword: ({ user, url }) => sendInBackground(passwordResetEmail(user, url)),
+      sendResetPassword: ({ user, url }) => send(passwordResetEmail(user, url)),
     },
     emailVerification: {
       sendOnSignUp: true,
-      sendVerificationEmail: ({ user, url }) => sendInBackground(verificationEmail(user, url)),
+      sendVerificationEmail: ({ user, url }) => send(verificationEmail(user, url)),
     },
     socialProviders: github ? { github } : {},
     // Login attempts are limited in Redis by our own limiter (docs/adr/0009).

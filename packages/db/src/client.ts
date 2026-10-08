@@ -3,6 +3,10 @@ import pg from 'pg';
 import * as schema from './schema.ts';
 
 export type Database = NodePgDatabase<typeof schema>;
+/** A transaction handle, as passed to db.transaction(async (tx) => ...). */
+export type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
+/** Anything queries can run on: the database or a transaction. */
+export type Executor = Database | Transaction;
 
 export interface DatabaseHandle {
   db: Database;
