@@ -36,3 +36,19 @@ tie has a stable order and cannot reorder other tasks.
   later exercise.
 - Learning exercise: compare integer and fractional positions under
   concurrent moves (spec exercise 3).
+
+## How it was built (Phase 1 step 5)
+
+- Instead of locking the two neighbour rows, every change to positions in a
+  project (creating or moving a task) first locks the **project row**
+  (`SELECT ... FOR UPDATE`). Changes within one project run one at a time;
+  different projects do not block each other. This also covers creating
+  tasks, where there is no neighbour to lock: without it, tasks created at
+  the same moment read the same "last position" and got identical keys (a
+  test proves the lock is needed: it fails every time without it).
+- `fractional-indexing` 4 quietly swaps a reversed pair of keys instead of
+  refusing it. The service checks the order itself and answers 409
+  `stale_board`, so a client with an out-of-date board reloads instead of
+  dropping the task somewhere unexpected.
+- Neighbour ids from the client are checked like any other id: another
+  workspace's task is a 404, a task in a different column is a 400.

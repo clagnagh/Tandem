@@ -48,11 +48,11 @@ All routes live under `/api/v1` and carry the workspace ID in the path so tenant
 
 - [ ] A new user can sign up, verify their email through the mail catcher, log in and log out.
 - [x] Login is rate limited to 5 attempts per minute per IP and email, using Redis.
-- [ ] A user can create a workspace, invite a second user by link and see them join as a member.
-- [ ] An invite link works exactly once and expires after 7 days.
+- [x] A user can create a workspace, invite a second user by link and see them join as a member.
+- [x] An invite link works exactly once and expires after 7 days.
 - [ ] Tasks can be created, edited, assigned, moved between columns and reordered by drag and drop; order survives a reload.
-- [ ] Two rapid moves of the same task never corrupt the order of other tasks.
-- [ ] An automated test proves user A cannot read, change or delete any workspace, project or task of user B, and it covers every endpoint.
+- [x] Two rapid moves of the same task never corrupt the order of other tasks.
+- [x] An automated test proves user A cannot read, change or delete any workspace, project or task of user B, and it covers every endpoint.
 - [x] Session cookies are httpOnly, Secure and SameSite=Lax, and passwords never appear in logs.
 - [ ] CI runs typecheck, lint, unit tests, integration tests and one Playwright flow on every pull request, and `main` deploys to staging automatically.
 
@@ -68,13 +68,13 @@ All routes live under `/api/v1` and carry the workspace ID in the path so tenant
 
 ### Review checklist
 
-- [ ] Every query on a tenant-owned table filters by `workspace_id` (search the codebase and confirm a test would fail without it).
-- [ ] Authorization is enforced in the service layer, not only hidden in the UI.
-- [ ] Every route validates input with Zod and rejects unknown fields.
-- [ ] Invite tokens are stored hashed, single use and expiring.
-- [ ] Login and password reset responses do not reveal whether an email has an account.
+- [x] Every query on a tenant-owned table filters by `workspace_id` (search the codebase and confirm a test would fail without it).
+- [x] Authorization is enforced in the service layer, not only hidden in the UI.
+- [x] Every route validates input with Zod and rejects unknown fields.
+- [x] Invite tokens are stored hashed, single use and expiring.
+- [x] Login and password reset responses do not reveal whether an email has an account.
 - [ ] No secrets in the repo, logs or client bundle; `.env.example` is complete.
-- [ ] The CSRF approach for cookie sessions is written down and tested.
+- [x] The CSRF approach for cookie sessions is written down and tested.
 
 ### Learning exercises
 

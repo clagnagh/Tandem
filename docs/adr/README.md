@@ -15,3 +15,4 @@ If a decision changes, write a new ADR that supersedes the old one.
 | [0007](0007-test-databases.md)                | Real Postgres in tests: local server or container | Accepted |
 | [0008](0008-run-typescript-directly.md)       | Run TypeScript directly with Node                 | Accepted |
 | [0009](0009-login-rate-limiting.md)           | Login rate limiting in Redis                      | Accepted |
+| [0010](0010-invite-links.md)                  | Invite links                                      | Accepted |

@@ -37,6 +37,9 @@ Redis + BullMQ, Yjs, Vitest, Playwright.
 - Every migration is reversible: each `migrations/NNNN_name.sql` has a
   `NNNN_name.down.sql`. Never use drizzle-kit migrate or push.
 - The browser only talks to Next.js; /api/* is forwarded to Fastify.
+- Routes that need a signed-in user register inside the protected plugin in
+  apps/server/src/app.ts (requireSession); use currentUser(request). Every
+  /api/v1 route needs a case in tests/isolation.int.test.ts or CI fails.
 - Services throw AppError subclasses (apps/server/src/errors.ts); the central
   error handler turns them into `{ error: { code, message, requestId } }`.
 - Node runs the TypeScript directly: relative imports end in `.ts`, and only
