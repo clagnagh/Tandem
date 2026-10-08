@@ -46,8 +46,11 @@ export const updateTaskBody = z
 
 /**
  * Move a task (question 12). The client names its new neighbours in the target
- * column; the server computes the position key. Omit both to move into an
- * empty column, omit one to move to the top or bottom.
+ * column and the server computes the position key:
+ * - beforeTaskId: the task that ends up directly above the moved one;
+ * - afterTaskId: the task that ends up directly below it.
+ * Give only afterTaskId to move to the top, only beforeTaskId to drop below a
+ * task, and neither to move to the bottom (or into an empty column).
  */
 export const moveTaskBody = z
   .strictObject({

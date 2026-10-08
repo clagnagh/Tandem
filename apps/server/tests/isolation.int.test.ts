@@ -1,7 +1,7 @@
 // Phase 1 acceptance criterion: "An automated test proves user A cannot
 // read, change or delete any workspace, project or task of user B, and it
-// covers every endpoint." Written before the code (step 3); step 5 builds
-// the endpoints and flips these from pendingIt to it.
+// covers every endpoint." Written before the code (step 3) and made to pass
+// by the endpoints built in step 5.
 //
 // How it stays complete: the first test compares the routes the app really
 // registers with the CASES table below. A new workspace route without a case
@@ -12,10 +12,9 @@
 import { randomUUID } from 'node:crypto';
 import { schema } from '@tandem/db';
 import type { RouteOptions } from 'fastify';
-import { afterAll, beforeAll, describe, expect } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createTestApp, type TestApp } from './support/app.ts';
 import { API, createVerifiedUser, send, type TestUser } from './support/http.ts';
-import { pendingIt } from './support/pending.ts';
 
 type Method = 'GET' | 'POST' | 'PATCH' | 'DELETE';
 
@@ -96,9 +95,7 @@ afterAll(async () => {
 });
 
 /**
- * Users are created through the real sign-up flow, so this needs step 4.
- * It runs inside each test (not in beforeAll) so that until then each test
- * fails on its own instead of the whole file erroring.
+ * Users are created once, through the real sign-up flow, on first use.
  */
 function ctx(): Promise<Ctx> {
   ctxPromise ??= (async () => {
@@ -174,7 +171,7 @@ async function expectOwnerCanDoIt(c: RouteCase, owner: TestUser, target: Fixture
 }
 
 describe('route coverage', () => {
-  pendingIt('[step 5] has an isolation case for every API route, and no stale ones', () => {
+  it('[step 5] has an isolation case for every API route, and no stale ones', () => {
     const actual = registered
       .filter((r) => r.method !== 'HEAD' && r.url.startsWith(`${API}/`))
       .filter((r) => !r.url.startsWith(`${API}/auth`))
@@ -191,7 +188,7 @@ describe('route coverage', () => {
 describe.each(CASES)('$method $route', (c) => {
   const usesChildIds = c.route.includes(':projectId') || c.route.includes(':taskId');
 
-  pendingIt('[step 5] rejects anonymous callers with 401', async () => {
+  it('[step 5] rejects anonymous callers with 401', async () => {
     const { alice } = await ctx();
     const target = await insertWorkspace(alice, []);
     const before = await snapshot();
@@ -203,7 +200,7 @@ describe.each(CASES)('$method $route', (c) => {
     await expectOwnerCanDoIt(c, alice, target);
   });
 
-  pendingIt('[step 5] answers 404 to someone outside the workspace, changing nothing', async () => {
+  it('[step 5] answers 404 to someone outside the workspace, changing nothing', async () => {
     const { alice, carol } = await ctx();
     const target = await insertWorkspace(alice, []);
     const before = await snapshot();
@@ -217,7 +214,7 @@ describe.each(CASES)('$method $route', (c) => {
   });
 
   if (usesChildIds) {
-    pendingIt('[step 5] refuses project and task ids from another workspace', async () => {
+    it('[step 5] refuses project and task ids from another workspace', async () => {
       const { alice, globex } = await ctx();
       const own = await insertWorkspace(alice, []);
       // Alice's own workspace in the path, Globex's project and task ids.
@@ -234,7 +231,7 @@ describe.each(CASES)('$method $route', (c) => {
   }
 
   if (OWNER_ONLY.has(key(c))) {
-    pendingIt('[step 5] is refused to members who are not owners (403)', async () => {
+    it('[step 5] is refused to members who are not owners (403)', async () => {
       const { alice, bob } = await ctx();
       const target = await insertWorkspace(alice, [bob]);
       const before = await snapshot();
@@ -249,7 +246,7 @@ describe.each(CASES)('$method $route', (c) => {
 });
 
 describe('ids inside request bodies', () => {
-  pendingIt("[step 5] will not move a task next to another workspace's task", async () => {
+  it("[step 5] will not move a task next to another workspace's task", async () => {
     const { alice, globex } = await ctx();
     const own = await insertWorkspace(alice, []);
     const before = await snapshot();
@@ -270,7 +267,7 @@ describe('ids inside request bodies', () => {
     expect(ok.statusCode, ok.body).toBe(200);
   });
 
-  pendingIt('[step 5] will not assign a task to someone outside the workspace', async () => {
+  it('[step 5] will not assign a task to someone outside the workspace', async () => {
     const { alice, carol } = await ctx();
     const own = await insertWorkspace(alice, []);
     const before = await snapshot();
@@ -292,7 +289,7 @@ describe('ids inside request bodies', () => {
 });
 
 describe(`GET ${API}/workspaces`, () => {
-  pendingIt("[step 5] lists only the caller's own workspaces", async () => {
+  it("[step 5] lists only the caller's own workspaces", async () => {
     const { alice, carol, globex } = await ctx();
     const own = await insertWorkspace(alice, []);
 

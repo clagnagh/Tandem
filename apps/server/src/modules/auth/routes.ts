@@ -19,12 +19,18 @@ function emailFrom(body: unknown): string | undefined {
   return typeof body.email === 'string' ? body.email.trim().toLowerCase() : undefined;
 }
 
-function toWebRequest(request: FastifyRequest, appUrl: string): Request {
+/** Copies Node-style request headers into a web-standard Headers object. */
+export function toHeaders(request: FastifyRequest): Headers {
   const headers = new Headers();
   for (const [name, value] of Object.entries(request.headers)) {
     if (value === undefined) continue;
     for (const v of Array.isArray(value) ? value : [value]) headers.append(name, v);
   }
+  return headers;
+}
+
+function toWebRequest(request: FastifyRequest, appUrl: string): Request {
+  const headers = toHeaders(request);
   // Replace whatever the client sent with the IP Fastify resolved, which
   // honours X-Forwarded-For only from trusted proxies.
   headers.set('x-forwarded-for', request.ip);
