@@ -30,3 +30,22 @@ Better Auth (1.7), mounted in Fastify, using the Drizzle adapter.
 - Passwords are hashed by the library and live in `accounts.password`.
 - Learning exercise: read Better Auth's session code and summarise how a
   session is created, stored and revoked (spec exercise 4).
+
+## Settings chosen when integrating (Phase 1 step 4)
+
+- Better Auth runs inside Fastify at `/api/v1/auth/*`, converting each
+  request to a web `Request` (`apps/server/src/modules/auth/routes.ts`).
+  `baseURL` is the web app's origin, so email links and the GitHub callback
+  go through Next.js.
+- Sign-in requires a verified email; reset links work once and expire
+  after an hour; resetting a password signs out every other session.
+- Cookies are always `Secure` (browsers allow that on `http://localhost`)
+  and named `__Secure-tandem.*`.
+- Better Auth puts the session token in some JSON bodies for bearer-token
+  clients. We strip it, because a token that JavaScript can read would undo
+  `HttpOnly`.
+- Emails are sent without waiting for SMTP, so a reset request takes the
+  same time whether or not the account exists. Send failures are logged.
+- Better Auth's log output goes to our pino logger. Request URLs are logged
+  without their query string, and reset tokens in paths are redacted.
+- Its built-in rate limiter is off; see ADR 0009.

@@ -12,7 +12,9 @@ fi
 cd "${CLAUDE_PROJECT_DIR:-$(pwd)}"
 
 pg_ctlcluster 16 main start 2>/dev/null || true
-redis-cli ping >/dev/null 2>&1 || redis-server --daemonize yes >/dev/null
+# No snapshots: this Redis is disposable, and saving would write dump.rdb
+# into whatever directory the session started in.
+redis-cli ping >/dev/null 2>&1 || redis-server --daemonize yes --save '' --appendonly no >/dev/null
 
 for _ in $(seq 1 20); do
   pg_isready -q -h localhost && break
