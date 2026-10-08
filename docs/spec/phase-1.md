@@ -46,11 +46,11 @@ All routes live under `/api/v1` and carry the workspace ID in the path so tenant
 
 ### Acceptance criteria
 
-- [ ] A new user can sign up, verify their email through the mail catcher, log in and log out.
+- [x] A new user can sign up, verify their email through the mail catcher, log in and log out.
 - [x] Login is rate limited to 5 attempts per minute per IP and email, using Redis.
 - [x] A user can create a workspace, invite a second user by link and see them join as a member.
 - [x] An invite link works exactly once and expires after 7 days.
-- [ ] Tasks can be created, edited, assigned, moved between columns and reordered by drag and drop; order survives a reload.
+- [x] Tasks can be created, edited, assigned, moved between columns and reordered by drag and drop; order survives a reload.
 - [x] Two rapid moves of the same task never corrupt the order of other tasks.
 - [x] An automated test proves user A cannot read, change or delete any workspace, project or task of user B, and it covers every endpoint.
 - [x] Session cookies are httpOnly, Secure and SameSite=Lax, and passwords never appear in logs.
