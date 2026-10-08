@@ -32,6 +32,7 @@ const W = `${API}/workspaces/:workspaceId`;
 const CASES: RouteCase[] = [
   { method: 'PATCH', route: W, body: { name: 'Renamed' }, okStatus: 200 },
   { method: 'DELETE', route: W, okStatus: 204 },
+  { method: 'GET', route: `${W}/members`, okStatus: 200 },
   { method: 'POST', route: `${W}/invites`, body: { email: 'newcomer@example.com' }, okStatus: 201 },
   { method: 'GET', route: `${W}/projects`, okStatus: 200 },
   { method: 'POST', route: `${W}/projects`, body: { name: 'New project' }, okStatus: 201 },

@@ -34,6 +34,10 @@ export function workspaceRoutes(workspaces: WorkspaceService) {
       return reply.status(204).send();
     });
 
+    app.get(`${W}/members`, (request) =>
+      workspaces.members(currentUser(request), parseId(params(request).workspaceId)),
+    );
+
     app.post(`${W}/invites`, async (request, reply) => {
       const workspaceId = parseId(params(request).workspaceId);
       const body = createInviteBody.parse(request.body);
